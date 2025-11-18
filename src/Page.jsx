@@ -180,33 +180,42 @@ const PrescriptionAnalyzer = ({ apiEndpoint = 'https://htr-backend.vercel.app/ap
   };
 
   const handleUpload = async () => {
-    if (!selectedFile) return;
+  if (!selectedFile) return;
 
-    setIsLoading(true);
-    setError(null);
+  setIsLoading(true);
+  setError(null);
 
-    const formData = new FormData();
-    formData.append('prescription', selectedFile);
+  try {
+    const reader = new FileReader();
 
-    try {
+    reader.onloadend = async () => {
+      const base64String = reader.result.split(",")[1];
+
       const response = await fetch(apiEndpoint, {
-        method: 'POST',
-        body: formData,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ imageBase64: base64String }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to analyze prescription');
+        throw new Error("Failed to analyze prescription");
       }
 
       const data = await response.json();
       setAnalysisResult(data);
       setShowModal(true);
-    } catch (err) {
-      setError(err.message || 'An error occurred while processing the prescription');
-    } finally {
       setIsLoading(false);
-    }
-  };
+    };
+
+    reader.readAsDataURL(selectedFile);
+  } catch (err) {
+    setError(err.message || "An error occurred while processing the prescription");
+    setIsLoading(false);
+  }
+};
+
 
   const clearSelection = () => {
     setSelectedFile(null);
@@ -261,5 +270,6 @@ const PrescriptionAnalyzer = ({ apiEndpoint = 'https://htr-backend.vercel.app/ap
 
 
 export default PrescriptionAnalyzer;
+
 
 
