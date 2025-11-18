@@ -154,7 +154,7 @@ const ResultModal = ({ isOpen, onClose, result }) => {
 };
 
 // Main Prescription Analyzer Component
-const PrescriptionAnalyzer = ({ apiEndpoint = 'https://htd-backend1.vercel.app/api/analyze' }) => {
+const PrescriptionAnalyzer = ({ apiEndpoint = 'https://htr-backend.vercel.app/api/analyze' }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -261,4 +261,5 @@ const PrescriptionAnalyzer = ({ apiEndpoint = 'https://htd-backend1.vercel.app/a
 
 
 export default PrescriptionAnalyzer;
+
 
