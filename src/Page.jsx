@@ -154,7 +154,7 @@ const ResultModal = ({ isOpen, onClose, result }) => {
 };
 
 // Main Prescription Analyzer Component
-const PrescriptionAnalyzer = ({ apiEndpoint = 'https://htr-backend.vercel.app/api/analyze' }) => {
+const Page = ({ apiEndpoint = 'https://htr-backend.vercel.app/api/analyze' }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -180,42 +180,47 @@ const PrescriptionAnalyzer = ({ apiEndpoint = 'https://htr-backend.vercel.app/ap
   };
 
   const handleUpload = async () => {
-  if (!selectedFile) return;
+    if (!selectedFile) return;
 
-  setIsLoading(true);
-  setError(null);
+    setIsLoading(true);
+    setError(null);
 
-  try {
-    const reader = new FileReader();
-
-    reader.onloadend = async () => {
-      const base64String = reader.result.split(",")[1];
+    try {
+      // Convert image to base64
+      const base64String = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          // Remove the data URL prefix (e.g., "data:image/jpeg;base64,")
+          const base64 = reader.result.split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(selectedFile);
+      });
 
       const response = await fetch(apiEndpoint, {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ imageBase64: base64String }),
+        body: JSON.stringify({
+          imageBase64: base64String,
+        }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to analyze prescription");
+        throw new Error('Failed to analyze prescription');
       }
 
       const data = await response.json();
       setAnalysisResult(data);
       setShowModal(true);
+    } catch (err) {
+      setError(err.message || 'An error occurred while processing the prescription');
+    } finally {
       setIsLoading(false);
-    };
-
-    reader.readAsDataURL(selectedFile);
-  } catch (err) {
-    setError(err.message || "An error occurred while processing the prescription");
-    setIsLoading(false);
-  }
-};
-
+    }
+  };
 
   const clearSelection = () => {
     setSelectedFile(null);
@@ -268,8 +273,4 @@ const PrescriptionAnalyzer = ({ apiEndpoint = 'https://htr-backend.vercel.app/ap
   );
 };
 
-
-export default PrescriptionAnalyzer;
-
-
-
+export default Page;
