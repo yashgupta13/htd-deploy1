@@ -154,7 +154,7 @@ const ResultModal = ({ isOpen, onClose, result }) => {
 };
 
 // Main Prescription Analyzer Component
-const Page = ({ apiEndpoint = 'https://htr-backend.vercel.app/api/analyze' }) => {
+const PrescriptionAnalyzer = ({ apiEndpoint = 'https://htr-backend.vercel.app/api/analyze' }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -198,6 +198,9 @@ const Page = ({ apiEndpoint = 'https://htr-backend.vercel.app/api/analyze' }) =>
         reader.readAsDataURL(selectedFile);
       });
 
+      console.log('Sending request to:', apiEndpoint);
+      console.log('Image size (KB):', Math.round(base64String.length / 1024));
+
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
@@ -208,15 +211,26 @@ const Page = ({ apiEndpoint = 'https://htr-backend.vercel.app/api/analyze' }) =>
         }),
       });
 
+      console.log('Response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Failed to analyze prescription');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Server error: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('Response data:', data);
       setAnalysisResult(data);
       setShowModal(true);
     } catch (err) {
-      setError(err.message || 'An error occurred while processing the prescription');
+      console.error('Upload error:', err);
+      
+      // Provide more specific error messages
+      if (err.message === 'Failed to fetch') {
+        setError('Connection failed. Please check your API endpoint and ensure CORS is enabled on your backend.');
+      } else {
+        setError(err.message || 'An error occurred while processing the prescription');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -273,4 +287,4 @@ const Page = ({ apiEndpoint = 'https://htr-backend.vercel.app/api/analyze' }) =>
   );
 };
 
-export default Page;
+export default PrescriptionAnalyzer;
