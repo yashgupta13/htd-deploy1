@@ -350,7 +350,7 @@ const response = await fetch(geminiApiUrl, {
       {
         parts: [
           {
-            text: 'You are an expert Medical Transcriptionist. Analyze the uploaded prescription image. 
+            text: `You are an expert Medical Transcriptionist. Analyze the uploaded prescription image. 
         Extract the following information. If any item is not visible or illegible, state 'N/A' for that field. 
         
         <OUTPUT_FORMAT>
@@ -364,7 +364,7 @@ const response = await fetch(geminiApiUrl, {
         8) Warnings/Contraindications: [List any explicit warnings or N/A]
         </OUTPUT_FORMAT>
 
-        Provide ONLY the text within the <OUTPUT_FORMAT> tags.'
+        Provide ONLY the text within the <OUTPUT_FORMAT> tags.`
           },
           {
             // The image part structure is correct
@@ -496,6 +496,7 @@ setShowModal(true);
 };
 
 export default PrescriptionAnalyzer;
+
 
 
 
