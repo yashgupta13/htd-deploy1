@@ -261,22 +261,7 @@ const PrescriptionAnalyzer = () => {
       });
 
       // Call Gemini API
-      const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-
-      const prompt = `You are an expert Medical Transcriptionist. Analyze the uploaded prescription image. Extract the following information. If any item is not visible or illegible, state 'N/A' for that field.
-
-<OUTPUT_FORMAT>
-1) Patient Name: [Extracted Name or N/A]
-2) Medication Names: [List all names clearly separated by commas, e.g., 'Aspirin, Amoxicillin']
-3) Dosage Information: [List all dosages corresponding to medications, e.g., '500mg, 250mg']
-4) Frequency: [List all frequencies, e.g., 'Twice daily, Once at bedtime']
-5) Duration: [List all durations, e.g., '7 days, Until finished']
-6) Doctor Name/Signature: [Name or N/A]
-7) Date: [Extracted Date in YYYY-MM-DD format or N/A]
-8) Warnings/Contraindications: [List any explicit warnings or N/A]
-</OUTPUT_FORMAT>
-
-Provide ONLY the text within the <OUTPUT_FORMAT> tags.`;
+      const geminiApiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
       const response = await fetch(geminiApiUrl, {
         method: 'POST',
@@ -288,7 +273,7 @@ Provide ONLY the text within the <OUTPUT_FORMAT> tags.`;
             {
               parts: [
                 {
-                  text: prompt
+                  text: 'Please analyze this prescription image. Extract and provide: 1) Patient name (if visible), 2) Medication names, 3) Dosage information, 4) Frequency, 5) Duration, 6) Doctor name/signature, 7) Date, 8) Any warnings or contraindications. Format the response clearly and concisely.'
                 },
                 {
                   inline_data: {
@@ -298,10 +283,7 @@ Provide ONLY the text within the <OUTPUT_FORMAT> tags.`;
                 }
               ]
             }
-          ],
-          config: {
-            temperature: 0.2
-          }
+          ]
         })
       });
 
