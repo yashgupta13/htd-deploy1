@@ -261,31 +261,32 @@ const PrescriptionAnalyzer = () => {
       });
 
       // Call Gemini API
-      const geminiApiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+      const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
-      const response = await fetch(geminiApiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: 'Please analyze this prescription image. Extract and provide: 1) Patient name (if visible), 2) Medication names, 3) Dosage information, 4) Frequency, 5) Duration, 6) Doctor name/signature, 7) Date, 8) Any warnings or contraindications. Format the response clearly and concisely.'
-                },
-                {
-                  inline_data: {
-                    mime_type: selectedFile.type,
-                    data: base64String
-                  }
-                }
-              ]
+const response = await fetch(geminiApiUrl, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    contents: [
+      {
+        parts: [
+          {
+            text: 'Please analyze this prescription image. Extract and provide: 1) Patient name (if visible), 2) Medication names, 3) Dosage information, 4) Frequency, 5) Duration, 6) Doctor name/signature, 7) Date, 8) Any warnings or contraindications. Format the response clearly and concisely.'
+          },
+          {
+            // The image part structure is correct
+            inlineData: { 
+              mimeType: selectedFile.type,
+              data: base64String
             }
-          ]
-        })
-      });
+          }
+        ]
+      }
+    ]
+  })
+});
 
      
 
@@ -401,6 +402,7 @@ const PrescriptionAnalyzer = () => {
 };
 
 export default PrescriptionAnalyzer;
+
 
 
 
