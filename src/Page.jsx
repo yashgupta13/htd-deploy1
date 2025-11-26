@@ -187,8 +187,8 @@ const PrescriptionAnalyzer = () => {
   const [analysisResult, setAnalysisResult] = useState(null);
   const [error, setError] = useState(null);
 
-  // Get API key from environment variable
-  const apiKey = process.env.REACT_APP_GEMINI_API_KEY || '';
+  // Get API key from environment variable (Vite uses VITE_ prefix)
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
 
   const handleFileSelect = (file) => {
     if (file && file.type.startsWith('image/')) {
