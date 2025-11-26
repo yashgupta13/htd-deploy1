@@ -310,16 +310,19 @@ const response = await fetch(geminiApiUrl, {
       }
 
       const data = await response.json();
+console.log("Gemini raw response:", data);
 
-       console.log(response);
+const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
-      // Extract the text response
-      if (!data.contents || !data.contents[0]?.parts?.[0]?.text) {
-        throw new Error('Invalid response from Gemini API');
-      }
+if (!text) {
+  throw new Error('Invalid response from Gemini API');
+}
 
-      setAnalysisResult(data.contents[0].parts[0]);
-      setShowModal(true);
+setAnalysisResult(text);
+setShowModal(true);
+
+
+    
 
     } catch (err) {
       console.error('Upload error:', err);
@@ -402,6 +405,7 @@ const response = await fetch(geminiApiUrl, {
 };
 
 export default PrescriptionAnalyzer;
+
 
 
 
