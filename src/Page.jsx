@@ -287,7 +287,7 @@ const PrescriptionAnalyzer = () => {
         })
       });
 
-      console.log(response);
+     
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -309,6 +309,8 @@ const PrescriptionAnalyzer = () => {
       }
 
       const data = await response.json();
+
+       console.log(response);
 
       // Extract the text response
       if (!data.contents || !data.contents[0]?.parts?.[0]?.text) {
@@ -399,5 +401,6 @@ const PrescriptionAnalyzer = () => {
 };
 
 export default PrescriptionAnalyzer;
+
 
 
