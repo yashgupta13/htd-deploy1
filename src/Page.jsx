@@ -112,6 +112,72 @@ const ErrorAlert = ({ message }) => {
 };
 
 // Result Modal Component
+// const ResultModal = ({ isOpen, onClose, result }) => {
+//   const [showRaw, setShowRaw] = useState(false);
+
+//   if (!isOpen) return null;
+
+//   return (
+//     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+//       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+//         <div className="bg-indigo-600 text-white p-6 flex items-center justify-between">
+//           <h2 className="text-2xl font-bold">Analysis Results</h2>
+//           <button
+//             onClick={onClose}
+//             className="text-white hover:bg-indigo-700 p-2 rounded-lg transition-colors"
+//           >
+//             <X className="w-6 h-6" />
+//           </button>
+//         </div>
+
+//         <div className="p-6 overflow-y-auto max-h-[calc(90vh-88px)]">
+//           {result ? (
+//             <div className="space-y-4">
+//               <button
+//                 onClick={() => setShowRaw(!showRaw)}
+//                 className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-semibold mb-4"
+//               >
+//                 {showRaw ? (
+//                   <>
+//                     <EyeOff className="w-4 h-4" />
+//                     Hide Raw Response
+//                   </>
+//                 ) : (
+//                   <>
+//                     <Eye className="w-4 h-4" />
+//                     Show Raw Response
+//                   </>
+//                 )}
+//               </button>
+
+//               {showRaw ? (
+//                 <pre className="bg-gray-50 p-4 rounded-lg overflow-x-auto text-xs leading-relaxed font-mono border border-gray-200">
+//                   {JSON.stringify(result, null, 2)}
+//                 </pre>
+//               ) : (
+//                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-gray-800 whitespace-pre-wrap text-sm leading-relaxed">
+//                   {result.text || 'No analysis text available'}
+//                 </div>
+//               )}
+//             </div>
+//           ) : (
+//             <p className="text-gray-600">No analysis data available</p>
+//           )}
+//         </div>
+
+//         <div className="bg-gray-50 p-4 flex justify-end gap-3">
+//           <button
+//             onClick={onClose}
+//             className="bg-indigo-600 text-white py-2 px-6 rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
+//           >
+//             Close
+//           </button>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+
 const ResultModal = ({ isOpen, onClose, result }) => {
   const [showRaw, setShowRaw] = useState(false);
 
@@ -120,8 +186,10 @@ const ResultModal = ({ isOpen, onClose, result }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+        
+        {/* Header */}
         <div className="bg-indigo-600 text-white p-6 flex items-center justify-between">
-          <h2 className="text-2xl font-bold">Analysis Results</h2>
+          <h2 className="text-2xl font-bold">Prescription Analysis</h2>
           <button
             onClick={onClose}
             className="text-white hover:bg-indigo-700 p-2 rounded-lg transition-colors"
@@ -130,9 +198,12 @@ const ResultModal = ({ isOpen, onClose, result }) => {
           </button>
         </div>
 
+        {/* Body */}
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-88px)]">
           {result ? (
             <div className="space-y-4">
+
+              {/* Show Raw / Hide Raw */}
               <button
                 onClick={() => setShowRaw(!showRaw)}
                 className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-semibold mb-4"
@@ -150,21 +221,25 @@ const ResultModal = ({ isOpen, onClose, result }) => {
                 )}
               </button>
 
+              {/* Raw JSON */}
               {showRaw ? (
                 <pre className="bg-gray-50 p-4 rounded-lg overflow-x-auto text-xs leading-relaxed font-mono border border-gray-200">
                   {JSON.stringify(result, null, 2)}
                 </pre>
               ) : (
+                // Formatted Medical Output
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-gray-800 whitespace-pre-wrap text-sm leading-relaxed">
-                  {result.text || 'No analysis text available'}
+                  {typeof result === "string" ? result : result.text || "No analysis text available"}
                 </div>
               )}
+
             </div>
           ) : (
             <p className="text-gray-600">No analysis data available</p>
           )}
         </div>
 
+        {/* Footer */}
         <div className="bg-gray-50 p-4 flex justify-end gap-3">
           <button
             onClick={onClose}
@@ -173,10 +248,12 @@ const ResultModal = ({ isOpen, onClose, result }) => {
             Close
           </button>
         </div>
+
       </div>
     </div>
   );
 };
+
 
 // Main Prescription Analyzer Component
 const PrescriptionAnalyzer = () => {
@@ -273,7 +350,21 @@ const response = await fetch(geminiApiUrl, {
       {
         parts: [
           {
-            text: 'Please analyze this prescription image. Extract and provide: 1) Patient name (if visible), 2) Medication names, 3) Dosage information, 4) Frequency, 5) Duration, 6) Doctor name/signature, 7) Date, 8) Any warnings or contraindications. Format the response clearly and concisely.'
+            text: 'You are an expert Medical Transcriptionist. Analyze the uploaded prescription image. 
+        Extract the following information. If any item is not visible or illegible, state 'N/A' for that field. 
+        
+        <OUTPUT_FORMAT>
+        1) Patient Name: [Extracted Name or N/A]
+        2) Medication Names: [List all names clearly separated by commas, e.g., 'Aspirin, Amoxicillin']
+        3) Dosage Information: [List all dosages corresponding to medications, e.g., '500mg, 250mg']
+        4) Frequency: [List all frequencies, e.g., 'Twice daily, Once at bedtime']
+        5) Duration: [List all durations, e.g., '7 days, Until finished']
+        6) Doctor Name/Signature: [Name or N/A]
+        7) Date: [Extracted Date in YYYY-MM-DD format or N/A]
+        8) Warnings/Contraindications: [List any explicit warnings or N/A]
+        </OUTPUT_FORMAT>
+
+        Provide ONLY the text within the <OUTPUT_FORMAT> tags.'
           },
           {
             // The image part structure is correct
@@ -405,6 +496,7 @@ setShowModal(true);
 };
 
 export default PrescriptionAnalyzer;
+
 
 
 
