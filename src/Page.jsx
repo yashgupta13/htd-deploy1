@@ -208,7 +208,7 @@ const PrescriptionAnalyzer = () => {
   };
 
   const handleUpload = async () => {
-    // Note: apiKey is assumed to be retrieved from process.env.GEMINI_API_KEY outside this function.
+    // Check if API key is configured
     if (!apiKey) {
       setError('Gemini API key is not configured. Please check your environment variables.');
       return;
@@ -245,8 +245,7 @@ const PrescriptionAnalyzer = () => {
         
         reader.onloadend = () => {
           try {
-            // This correctly extracts the raw base64 string after the comma (data URL prefix)
-            const base64 = reader.result.split(',')[1]; 
+            const base64 = reader.result.split(',')[1];
             if (!base64) {
               reject(new Error('Failed to convert image to base64'));
               return;
@@ -261,28 +260,23 @@ const PrescriptionAnalyzer = () => {
         reader.readAsDataURL(selectedFile);
       });
 
-      // --- OPTIMIZED GEMINI API CALL ---
-
-      // 1. UPDATED URL: Using v1beta and the recommended gemini-2.5-flash model
+      // Call Gemini API
       const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-      
-      const prompt = `
-        You are an expert Medical Transcriptionist. Analyze the uploaded prescription image. 
-        Extract the following information. If any item is not visible or illegible, state 'N/A' for that field. 
-        
-        <OUTPUT_FORMAT>
-        1) Patient Name: [Extracted Name or N/A]
-        2) Medication Names: [List all names clearly separated by commas, e.g., 'Aspirin, Amoxicillin']
-        3) Dosage Information: [List all dosages corresponding to medications, e.g., '500mg, 250mg']
-        4) Frequency: [List all frequencies, e.g., 'Twice daily, Once at bedtime']
-        5) Duration: [List all durations, e.g., '7 days, Until finished']
-        6) Doctor Name/Signature: [Name or N/A]
-        7) Date: [Extracted Date in YYYY-MM-DD format or N/A]
-        8) Warnings/Contraindications: [List any explicit warnings or N/A]
-        </OUTPUT_FORMAT>
 
-        Provide ONLY the text within the <OUTPUT_FORMAT> tags.
-      `;
+      const prompt = `You are an expert Medical Transcriptionist. Analyze the uploaded prescription image. Extract the following information. If any item is not visible or illegible, state 'N/A' for that field.
+
+<OUTPUT_FORMAT>
+1) Patient Name: [Extracted Name or N/A]
+2) Medication Names: [List all names clearly separated by commas, e.g., 'Aspirin, Amoxicillin']
+3) Dosage Information: [List all dosages corresponding to medications, e.g., '500mg, 250mg']
+4) Frequency: [List all frequencies, e.g., 'Twice daily, Once at bedtime']
+5) Duration: [List all durations, e.g., '7 days, Until finished']
+6) Doctor Name/Signature: [Name or N/A]
+7) Date: [Extracted Date in YYYY-MM-DD format or N/A]
+8) Warnings/Contraindications: [List any explicit warnings or N/A]
+</OUTPUT_FORMAT>
+
+Provide ONLY the text within the <OUTPUT_FORMAT> tags.`;
 
       const response = await fetch(geminiApiUrl, {
         method: 'POST',
@@ -294,7 +288,7 @@ const PrescriptionAnalyzer = () => {
             {
               parts: [
                 {
-                  text: prompt // The refined text prompt
+                  text: prompt
                 },
                 {
                   inline_data: {
@@ -305,27 +299,24 @@ const PrescriptionAnalyzer = () => {
               ]
             }
           ],
-          // 2. Added Configuration: Lower temperature for factual extraction
           config: {
-              temperature: 0.2, 
+            temperature: 0.2
           }
         })
       });
-      
-      // --- END OPTIMIZED API CALL ---
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         
         switch (response.status) {
           case 400:
-            throw new Error('Invalid API request. Check your image, prompt, or request formatting.');
+            throw new Error('Invalid API request. Check your API key and image.');
           case 401:
             throw new Error('Invalid API key. Please check and try again.');
           case 403:
             throw new Error('API access denied. Check your API key permissions.');
           case 429:
-            throw new Error('Too many requests (Rate Limit Exceeded). Please wait a moment and try again.');
+            throw new Error('Too many requests. Please wait a moment and try again.');
           case 500:
             throw new Error('Gemini API server error. Please try again later.');
           default:
@@ -335,20 +326,12 @@ const PrescriptionAnalyzer = () => {
 
       const data = await response.json();
 
-      // Ensure the response path is correct
-      const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      
-      if (!resultText) {
-        // Handle cases where the model returns an empty or blocked response
-        const safetyRatings = data.candidates?.[0]?.safetyRatings;
-        if (safetyRatings) {
-             console.warn('Safety Blocked:', safetyRatings);
-             throw new Error('Response blocked due to safety settings. Please check your image content.');
-        }
-        throw new Error('Invalid or empty response from Gemini API.');
+      // Extract the text response
+      if (!data.contents || !data.contents[0]?.parts?.[0]?.text) {
+        throw new Error('Invalid response from Gemini API');
       }
 
-      setAnalysisResult(resultText); // Use resultText instead of data.contents[0].parts[0] for robustness
+      setAnalysisResult(data.contents[0].parts[0]);
       setShowModal(true);
 
     } catch (err) {
@@ -356,7 +339,7 @@ const PrescriptionAnalyzer = () => {
 
       if (err.name === 'AbortError') {
         setError('Request timed out. Please try again.');
-      } else if (err.message.includes('Failed to fetch')) {
+      } else if (err.message === 'Failed to fetch') {
         setError('Connection failed. Please check your internet connection.');
       } else {
         setError(err.message || 'An error occurred while processing the image');
@@ -365,6 +348,7 @@ const PrescriptionAnalyzer = () => {
       setIsLoading(false);
     }
   };
+
   const clearSelection = () => {
     setSelectedFile(null);
     setPreviewUrl(null);
@@ -431,4 +415,3 @@ const PrescriptionAnalyzer = () => {
 };
 
 export default PrescriptionAnalyzer;
-
