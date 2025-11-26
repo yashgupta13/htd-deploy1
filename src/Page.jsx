@@ -287,6 +287,8 @@ const PrescriptionAnalyzer = () => {
         })
       });
 
+      cosole.log(response);
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         
@@ -397,3 +399,4 @@ const PrescriptionAnalyzer = () => {
 };
 
 export default PrescriptionAnalyzer;
+
