@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Upload, X, FileText, Loader2, AlertCircle } from 'lucide-react';
+import { Upload, X, FileText, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 // Upload Area Component
 const UploadArea = ({ onFileSelect }) => {
@@ -41,7 +41,7 @@ const UploadArea = ({ onFileSelect }) => {
           Drop your prescription here or click to browse
         </p>
         <p className="text-sm text-gray-500">
-          Supports: JPG, PNG, JPEG
+          Supports: JPG, PNG, JPEG, WebP
         </p>
       </label>
     </div>
@@ -113,6 +113,8 @@ const ErrorAlert = ({ message }) => {
 
 // Result Modal Component
 const ResultModal = ({ isOpen, onClose, result }) => {
+  const [showRaw, setShowRaw] = useState(false);
+
   if (!isOpen) return null;
 
   return (
@@ -131,9 +133,32 @@ const ResultModal = ({ isOpen, onClose, result }) => {
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-88px)]">
           {result ? (
             <div className="space-y-4">
-              <pre className="bg-gray-50 p-4 rounded-lg overflow-x-auto text-sm">
-                {JSON.stringify(result, null, 2)}
-              </pre>
+              <button
+                onClick={() => setShowRaw(!showRaw)}
+                className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-semibold mb-4"
+              >
+                {showRaw ? (
+                  <>
+                    <EyeOff className="w-4 h-4" />
+                    Hide Raw Response
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-4 h-4" />
+                    Show Raw Response
+                  </>
+                )}
+              </button>
+
+              {showRaw ? (
+                <pre className="bg-gray-50 p-4 rounded-lg overflow-x-auto text-xs leading-relaxed font-mono border border-gray-200">
+                  {JSON.stringify(result, null, 2)}
+                </pre>
+              ) : (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-gray-800 whitespace-pre-wrap text-sm leading-relaxed">
+                  {result.text || 'No analysis text available'}
+                </div>
+              )}
             </div>
           ) : (
             <p className="text-gray-600">No analysis data available</p>
@@ -154,13 +179,16 @@ const ResultModal = ({ isOpen, onClose, result }) => {
 };
 
 // Main Prescription Analyzer Component
-const PrescriptionAnalyzer = ({ apiEndpoint = 'https://htr-backend.vercel.app/api/analyze' }) => {
+const PrescriptionAnalyzer = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [error, setError] = useState(null);
+
+  // Get API key from environment variable
+  const apiKey = process.env.REACT_APP_GEMINI_API_KEY || '';
 
   const handleFileSelect = (file) => {
     if (file && file.type.startsWith('image/')) {
@@ -180,125 +208,129 @@ const PrescriptionAnalyzer = ({ apiEndpoint = 'https://htr-backend.vercel.app/ap
   };
 
   const handleUpload = async () => {
-  // Validate file selection
-  if (!selectedFile) {
-    setError('Please select an image first');
-    return;
-  }
+    // Check if API key is configured
+    if (!apiKey) {
+      setError('Gemini API key is not configured. Please check your environment variables.');
+      return;
+    }
 
-  // Validate file type
-  const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-  if (!validTypes.includes(selectedFile.type)) {
-    setError('Please upload a valid image file (JPEG, PNG, or WebP)');
-    return;
-  }
+    // Validate file selection
+    if (!selectedFile) {
+      setError('Please select an image first');
+      return;
+    }
 
-  // Validate file size (5MB limit)
-  const MAX_SIZE = 5 * 1024 * 1024; // 5MB
-  if (selectedFile.size > MAX_SIZE) {
-    setError('Image size must be less than 5MB');
-    return;
-  }
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+    if (!validTypes.includes(selectedFile.type)) {
+      setError('Please upload a valid image file (JPEG, PNG, WebP, or GIF)');
+      return;
+    }
 
-  setIsLoading(true);
-  setError(null);
-  setAnalysisResult(null); // Clear previous results
+    // Validate file size (20MB limit for Gemini)
+    const MAX_SIZE = 20 * 1024 * 1024; // 20MB
+    if (selectedFile.size > MAX_SIZE) {
+      setError('Image size must be less than 20MB');
+      return;
+    }
 
-  try {
-    // Convert image to base64
-    const base64String = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      
-      reader.onloadend = () => {
-        try {
-          // Remove the data URL prefix (e.g., "data:image/jpeg;base64,")
-          const base64 = reader.result.split(',')[1];
-          
-          if (!base64) {
-            reject(new Error('Failed to convert image to base64'));
-            return;
+    setIsLoading(true);
+    setError(null);
+    setAnalysisResult(null);
+
+    try {
+      // Convert image to base64
+      const base64String = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        
+        reader.onloadend = () => {
+          try {
+            const base64 = reader.result.split(',')[1];
+            if (!base64) {
+              reject(new Error('Failed to convert image to base64'));
+              return;
+            }
+            resolve(base64);
+          } catch (err) {
+            reject(new Error('Error processing image data'));
           }
-          
-          resolve(base64);
-        } catch (err) {
-          reject(new Error('Error processing image data'));
+        };
+        
+        reader.onerror = () => reject(new Error('Failed to read image file'));
+        reader.readAsDataURL(selectedFile);
+      });
+
+      // Call Gemini API
+      const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+      const response = await fetch(geminiApiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: 'Please analyze this prescription image. Extract and provide: 1) Patient name (if visible), 2) Medication names, 3) Dosage information, 4) Frequency, 5) Duration, 6) Doctor name/signature, 7) Date, 8) Any warnings or contraindications. Format the response clearly and concisely.'
+                },
+                {
+                  inline_data: {
+                    mime_type: selectedFile.type,
+                    data: base64String
+                  }
+                }
+              ]
+            }
+          ]
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        
+        switch (response.status) {
+          case 400:
+            throw new Error('Invalid API request. Check your API key and image.');
+          case 401:
+            throw new Error('Invalid API key. Please check and try again.');
+          case 403:
+            throw new Error('API access denied. Check your API key permissions.');
+          case 429:
+            throw new Error('Too many requests. Please wait a moment and try again.');
+          case 500:
+            throw new Error('Gemini API server error. Please try again later.');
+          default:
+            throw new Error(errorData.error?.message || `API error: ${response.status}`);
         }
-      };
-      
-      reader.onerror = () => reject(new Error('Failed to read image file'));
-      reader.readAsDataURL(selectedFile);
-    });
-
-    console.log('Sending request to:', apiEndpoint);
-    console.log('Image size (KB):', Math.round(base64String.length / 1024));
-    console.log('Image type:', selectedFile.type);
-
-    // Send to backend with timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-
-    const response = await fetch(apiEndpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        imageBase64: base64String,
-        mimeType: selectedFile.type, // Send actual MIME type
-      }),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    console.log('Response status:', response.status);
-
-    // Handle different response statuses
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      
-      switch (response.status) {
-        case 400:
-          throw new Error(errorData.error || 'Invalid image data. Please try another image.');
-        case 413:
-          throw new Error('Image is too large. Please use an image under 5MB.');
-        case 429:
-          throw new Error('Too many requests. Please wait a moment and try again.');
-        case 500:
-          throw new Error('Server error. Please try again later.');
-        default:
-          throw new Error(errorData.error || `Server error: ${response.status}`);
       }
+
+      const data = await response.json();
+
+      // Extract the text response
+      if (!data.contents || !data.contents[0]?.parts?.[0]?.text) {
+        throw new Error('Invalid response from Gemini API');
+      }
+
+      setAnalysisResult(data.contents[0].parts[0]);
+      setShowModal(true);
+
+    } catch (err) {
+      console.error('Upload error:', err);
+
+      if (err.name === 'AbortError') {
+        setError('Request timed out. Please try again.');
+      } else if (err.message === 'Failed to fetch') {
+        setError('Connection failed. Please check your internet connection.');
+      } else {
+        setError(err.message || 'An error occurred while processing the image');
+      }
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    const data = await response.json();
-    console.log('Response data:', data);
-
-    // Validate response data
-    if (!data || !data.output) {
-      throw new Error('Invalid response from server');
-    }
-
-    setAnalysisResult(data);
-    setShowModal(true);
-
-  } catch (err) {
-    console.error('Upload error:', err);
-
-    // Provide specific error messages
-    if (err.name === 'AbortError') {
-      setError('Request timed out. Please try again with a smaller image.');
-    } else if (err.message === 'Failed to fetch') {
-      setError('Connection failed. Please check your internet connection and API endpoint.');
-    } else if (err.message.includes('NetworkError')) {
-      setError('Network error. Please check your connection and try again.');
-    } else {
-      setError(err.message || 'An error occurred while processing the image');
-    }
-  } finally {
-    setIsLoading(false);
-  }
-};
   const clearSelection = () => {
     setSelectedFile(null);
     setPreviewUrl(null);
@@ -320,9 +352,23 @@ const PrescriptionAnalyzer = ({ apiEndpoint = 'https://htr-backend.vercel.app/ap
             Prescription Analyzer
           </h1>
           <p className="text-gray-600">
-            Upload a doctor's prescription image for analysis
+            Upload a doctor's prescription image for AI-powered analysis
           </p>
         </div>
+
+        {!apiKey && (
+          <div className="max-w-4xl mx-auto mb-6 bg-red-50 border border-red-200 rounded-xl p-6">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-red-900 mb-2">Configuration Error</h3>
+                <p className="text-red-800 text-sm">
+                  The Gemini API key environment variable is not set. Please add <code className="bg-red-100 px-2 py-1 rounded">REACT_APP_GEMINI_API_KEY</code> to your <code className="bg-red-100 px-2 py-1 rounded">.env.local</code> file.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="bg-white rounded-2xl shadow-xl p-8">
           {!previewUrl ? (
@@ -351,4 +397,3 @@ const PrescriptionAnalyzer = ({ apiEndpoint = 'https://htr-backend.vercel.app/ap
 };
 
 export default PrescriptionAnalyzer;
-
