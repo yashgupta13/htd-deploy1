@@ -180,62 +180,125 @@ const PrescriptionAnalyzer = ({ apiEndpoint = 'https://htr-backend.vercel.app/ap
   };
 
   const handleUpload = async () => {
-    if (!selectedFile) return;
+  // Validate file selection
+  if (!selectedFile) {
+    setError('Please select an image first');
+    return;
+  }
 
-    setIsLoading(true);
-    setError(null);
+  // Validate file type
+  const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  if (!validTypes.includes(selectedFile.type)) {
+    setError('Please upload a valid image file (JPEG, PNG, or WebP)');
+    return;
+  }
 
-    try {
-      // Convert image to base64
-      const base64String = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
+  // Validate file size (5MB limit)
+  const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+  if (selectedFile.size > MAX_SIZE) {
+    setError('Image size must be less than 5MB');
+    return;
+  }
+
+  setIsLoading(true);
+  setError(null);
+  setAnalysisResult(null); // Clear previous results
+
+  try {
+    // Convert image to base64
+    const base64String = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onloadend = () => {
+        try {
           // Remove the data URL prefix (e.g., "data:image/jpeg;base64,")
           const base64 = reader.result.split(',')[1];
+          
+          if (!base64) {
+            reject(new Error('Failed to convert image to base64'));
+            return;
+          }
+          
           resolve(base64);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(selectedFile);
-      });
-
-      console.log('Sending request to:', apiEndpoint);
-      console.log('Image size (KB):', Math.round(base64String.length / 1024));
-
-      const response = await fetch(apiEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          imageBase64: base64String,
-        }),
-      });
-
-      console.log('Response status:', response.status);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Server error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('Response data:', data);
-      setAnalysisResult(data);
-      setShowModal(true);
-    } catch (err) {
-      console.error('Upload error:', err);
+        } catch (err) {
+          reject(new Error('Error processing image data'));
+        }
+      };
       
-      // Provide more specific error messages
-      if (err.message === 'Failed to fetch') {
-        setError('Connection failed. Please check your API endpoint and ensure CORS is enabled on your backend.');
-      } else {
-        setError(err.message || 'An error occurred while processing the prescription');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      reader.onerror = () => reject(new Error('Failed to read image file'));
+      reader.readAsDataURL(selectedFile);
+    });
 
+    console.log('Sending request to:', apiEndpoint);
+    console.log('Image size (KB):', Math.round(base64String.length / 1024));
+    console.log('Image type:', selectedFile.type);
+
+    // Send to backend with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+    const response = await fetch(apiEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        imageBase64: base64String,
+        mimeType: selectedFile.type, // Send actual MIME type
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    console.log('Response status:', response.status);
+
+    // Handle different response statuses
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      
+      switch (response.status) {
+        case 400:
+          throw new Error(errorData.error || 'Invalid image data. Please try another image.');
+        case 413:
+          throw new Error('Image is too large. Please use an image under 5MB.');
+        case 429:
+          throw new Error('Too many requests. Please wait a moment and try again.');
+        case 500:
+          throw new Error('Server error. Please try again later.');
+        default:
+          throw new Error(errorData.error || `Server error: ${response.status}`);
+      }
+    }
+
+    const data = await response.json();
+    console.log('Response data:', data);
+
+    // Validate response data
+    if (!data || !data.output) {
+      throw new Error('Invalid response from server');
+    }
+
+    setAnalysisResult(data);
+    setShowModal(true);
+
+  } catch (err) {
+    console.error('Upload error:', err);
+
+    // Provide specific error messages
+    if (err.name === 'AbortError') {
+      setError('Request timed out. Please try again with a smaller image.');
+    } else if (err.message === 'Failed to fetch') {
+      setError('Connection failed. Please check your internet connection and API endpoint.');
+    } else if (err.message.includes('NetworkError')) {
+      setError('Network error. Please check your connection and try again.');
+    } else {
+      setError(err.message || 'An error occurred while processing the image');
+    }
+  } finally {
+    setIsLoading(false);
+  }
+};
   const clearSelection = () => {
     setSelectedFile(null);
     setPreviewUrl(null);
@@ -288,3 +351,4 @@ const PrescriptionAnalyzer = ({ apiEndpoint = 'https://htr-backend.vercel.app/ap
 };
 
 export default PrescriptionAnalyzer;
+
