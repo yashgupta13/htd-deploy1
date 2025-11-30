@@ -543,72 +543,134 @@ const ResultModal = ({ isOpen, onClose, result }) => {
                   )}
                 </div>
               ) : parsedData ? (
-                // Formatted Medical Output with better structure
-                <div className="space-y-3">
-                  {parsedData.map((item, index) => {
-                    if (item.raw) {
-                      return (
-                        <p key={index} className="text-gray-700 text-sm">
-                          {item.raw}
+                // Formatted Medical Output with Table Structure
+                <div className="space-y-6">
+                  {/* Patient and Doctor Information */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {parsedData.filter(item => 
+                      item.label && !item.label.toLowerCase().includes('medication') && 
+                      !item.label.toLowerCase().includes('dosage') &&
+                      !item.label.toLowerCase().includes('frequency') &&
+                      !item.label.toLowerCase().includes('duration')
+                    ).map((item, index) => (
+                      <div 
+                        key={index}
+                        className="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-indigo-500 rounded-r-lg p-4"
+                      >
+                        <p className="text-xs font-semibold text-gray-600 mb-1">
+                          {item.label}
                         </p>
-                      );
-                    }
+                        <p className="text-base text-gray-800 font-medium">
+                          {item.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Medications Table */}
+                  {(() => {
+                    const medSection = parsedData.find(item => item.label && item.label.toLowerCase().includes('medication'));
+                    const dosageSection = parsedData.find(item => item.label && item.label.toLowerCase().includes('dosage'));
+                    const frequencySection = parsedData.find(item => item.label && item.label.toLowerCase().includes('frequency'));
+                    const durationSection = parsedData.find(item => item.label && item.label.toLowerCase().includes('duration'));
                     
-                    // Check if this is the medication section
-                    const isMedicationSection = item.label && item.label.toLowerCase().includes('medication');
+                    if (!medSection) return null;
+                    
+                    const meds = medSection.value.split(',').map(m => m.trim()).filter(m => m && m !== 'N/A');
+                    const dosages = dosageSection ? dosageSection.value.split(',').map(m => m.trim()) : [];
+                    const frequencies = frequencySection ? frequencySection.value.split(',').map(m => m.trim()) : [];
+                    const durations = durationSection ? durationSection.value.split(',').map(m => m.trim()) : [];
+                    
+                    if (meds.length === 0) return null;
                     
                     return (
-                      <div key={index}>
-                        <div 
-                          className="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-indigo-500 rounded-r-lg p-4 hover:shadow-md transition-shadow"
-                        >
-                          <div className="flex items-start gap-3">
-                            <span className="text-indigo-600 font-bold text-lg flex-shrink-0">
-                              {item.number}
-                            </span>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-gray-600 mb-1">
-                                {item.label}
-                              </p>
-                              <p className="text-base text-gray-800 break-words">
-                                {item.value}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Show medication selector buttons */}
-                        {isMedicationSection && medications.length > 0 && (
-                          <div className="mt-3 pl-10">
-                            <p className="text-xs font-medium text-gray-600 mb-2">
-                              Find alternatives for:
-                            </p>
-                            <div className="flex flex-wrap gap-2">
-                              {medications.map((med, medIndex) => (
-                                <button
-                                  key={medIndex}
-                                  onClick={() => handleFetchAlternatives(med)}
-                                  disabled={loadingAlternatives}
-                                  className="bg-white border-2 border-indigo-300 text-indigo-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-50 hover:border-indigo-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                >
-                                  {loadingAlternatives && selectedMedication === med ? (
-                                    <>
-                                      <Loader2 className="w-4 h-4 animate-spin" />
-                                      Loading...
-                                    </>
-                                  ) : (
-                                    <>
-                                      💊 {med}
-                                    </>
-                                  )}
-                                </button>
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-800 mb-3">Prescribed Medications</h3>
+                        <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm mb-4">
+                          <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gradient-to-r from-indigo-600 to-indigo-700">
+                              <tr>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                                  #
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                                  Medication Name
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                                  Dosage
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                                  Frequency
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                                  Duration
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                                  Action
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              {meds.map((med, index) => (
+                                <tr key={index} className="hover:bg-indigo-50 transition-colors">
+                                  <td className="px-4 py-3 text-sm font-medium text-gray-700">
+                                    {index + 1}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm font-semibold text-gray-900">
+                                    {med}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-700">
+                                    {dosages[index] || 'N/A'}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-700">
+                                    {frequencies[index] || 'N/A'}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-700">
+                                    {durations[index] || 'N/A'}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm">
+                                    <button
+                                      onClick={() => handleFetchAlternatives(med)}
+                                      disabled={loadingAlternatives}
+                                      className="bg-indigo-600 text-white px-3 py-1.5 rounded-md text-xs font-medium hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                                    >
+                                      {loadingAlternatives && selectedMedication === med ? (
+                                        <>
+                                          <Loader2 className="w-3 h-3 animate-spin" />
+                                          Loading...
+                                        </>
+                                      ) : (
+                                        <>
+                                          Find Alternatives
+                                        </>
+                                      )}
+                                    </button>
+                                  </td>
+                                </tr>
                               ))}
-                            </div>
-                          </div>
-                        )}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     );
-                  })}
+                  })()}
+
+                  {/* Warnings Section */}
+                  {(() => {
+                    const warningsSection = parsedData.find(item => item.label && item.label.toLowerCase().includes('warning'));
+                    if (!warningsSection || warningsSection.value === 'N/A') return null;
+                    
+                    return (
+                      <div className="bg-amber-50 border-l-4 border-amber-500 rounded-r-lg p-4">
+                        <p className="text-xs font-semibold text-amber-800 mb-1">
+                          ⚠️ {warningsSection.label}
+                        </p>
+                        <p className="text-sm text-amber-900">
+                          {warningsSection.value}
+                        </p>
+                      </div>
+                    );
+                  })()}
                 </div>
               ) : (
                 // Fallback for non-parsed content
@@ -885,6 +947,7 @@ setShowModal(true);
 };
 
 export default PrescriptionAnalyzer;
+
 
 
 
