@@ -178,72 +178,210 @@ const ErrorAlert = ({ message }) => {
 //   );
 // };
 
+// const ResultModal = ({ isOpen, onClose, result }) => {
+//   const [showRaw, setShowRaw] = useState(false);
+
+//   if (!isOpen) return null;
+
+//   return (
+//     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+//       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+        
+//         {/* Header */}
+//         <div className="bg-indigo-600 text-white p-6 flex items-center justify-between">
+//           <h2 className="text-2xl font-bold">Prescription Analysis</h2>
+//           <button
+//             onClick={onClose}
+//             className="text-white hover:bg-indigo-700 p-2 rounded-lg transition-colors"
+//           >
+//             <X className="w-6 h-6" />
+//           </button>
+//         </div>
+
+//         {/* Body */}
+//         <div className="p-6 overflow-y-auto max-h-[calc(90vh-88px)]">
+//           {result ? (
+//             <div className="space-y-4">
+
+//               {/* Show Raw / Hide Raw */}
+//               <button
+//                 onClick={() => setShowRaw(!showRaw)}
+//                 className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-semibold mb-4"
+//               >
+//                 {showRaw ? (
+//                   <>
+//                     <EyeOff className="w-4 h-4" />
+//                     Hide Raw Response
+//                   </>
+//                 ) : (
+//                   <>
+//                     <Eye className="w-4 h-4" />
+//                     Show Raw Response
+//                   </>
+//                 )}
+//               </button>
+
+//               {/* Raw JSON */}
+//               {showRaw ? (
+//                 <pre className="bg-gray-50 p-4 rounded-lg overflow-x-auto text-xs leading-relaxed font-mono border border-gray-200">
+//                   {JSON.stringify(result, null, 2)}
+//                 </pre>
+//               ) : (
+//                 // Formatted Medical Output
+//                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-gray-800 whitespace-pre-wrap text-sm leading-relaxed">
+//                   {typeof result === "string" ? result : result.text || "No analysis text available"}
+//                 </div>
+//               )}
+
+//             </div>
+//           ) : (
+//             <p className="text-gray-600">No analysis data available</p>
+//           )}
+//         </div>
+
+//         {/* Footer */}
+//         <div className="bg-gray-50 p-4 flex justify-end gap-3">
+//           <button
+//             onClick={onClose}
+//             className="bg-indigo-600 text-white py-2 px-6 rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
+//           >
+//             Close
+//           </button>
+//         </div>
+
+//       </div>
+//     </div>
+//   );
+// };
+
+
 const ResultModal = ({ isOpen, onClose, result }) => {
   const [showRaw, setShowRaw] = useState(false);
 
   if (!isOpen) return null;
 
+  // Parse the result text into sections
+  const parseResult = (text) => {
+    if (!text) return null;
+    const lines = text.split('\n').filter(line => line.trim());
+    return lines.map((line, index) => {
+      const match = line.match(/^(\d+\))\s*(.+?):\s*(.+)$/);
+      if (match) {
+        return { number: match[1], label: match[2], value: match[3] };
+      }
+      return { raw: line };
+    });
+  };
+
+  const parsedData = typeof result === "string" ? parseResult(result) : null;
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden">
         
         {/* Header */}
-        <div className="bg-indigo-600 text-white p-6 flex items-center justify-between">
-          <h2 className="text-2xl font-bold">Prescription Analysis</h2>
-          <button
-            onClick={onClose}
-            className="text-white hover:bg-indigo-700 p-2 rounded-lg transition-colors"
-          >
-            <X className="w-6 h-6" />
-          </button>
+        <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <FileText className="w-8 h-8" />
+              <h2 className="text-2xl font-bold">Prescription Analysis</h2>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-all"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
         </div>
 
         {/* Body */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-88px)]">
+        <div className="overflow-y-auto max-h-[calc(90vh-180px)]">
           {result ? (
-            <div className="space-y-4">
+            <div className="p-6">
 
-              {/* Show Raw / Hide Raw */}
-              <button
-                onClick={() => setShowRaw(!showRaw)}
-                className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-semibold mb-4"
-              >
-                {showRaw ? (
-                  <>
-                    <EyeOff className="w-4 h-4" />
-                    Hide Raw Response
-                  </>
-                ) : (
-                  <>
-                    <Eye className="w-4 h-4" />
-                    Show Raw Response
-                  </>
-                )}
-              </button>
+              {/* Toggle Button */}
+              <div className="flex justify-end mb-4">
+                <button
+                  onClick={() => setShowRaw(!showRaw)}
+                  className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 px-4 py-2 rounded-lg font-medium transition-all"
+                >
+                  {showRaw ? (
+                    <>
+                      <EyeOff className="w-4 h-4" />
+                      Hide Raw Response
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-4 h-4" />
+                      Show Raw Response
+                    </>
+                  )}
+                </button>
+              </div>
 
-              {/* Raw JSON */}
+              {/* Content */}
               {showRaw ? (
-                <pre className="bg-gray-50 p-4 rounded-lg overflow-x-auto text-xs leading-relaxed font-mono border border-gray-200">
+                <pre className="bg-gray-900 text-green-400 p-5 rounded-xl overflow-x-auto text-xs leading-relaxed font-mono shadow-inner">
                   {JSON.stringify(result, null, 2)}
                 </pre>
+              ) : parsedData ? (
+                // Formatted Medical Output with better structure
+                <div className="space-y-3">
+                  {parsedData.map((item, index) => {
+                    if (item.raw) {
+                      return (
+                        <p key={index} className="text-gray-700 text-sm">
+                          {item.raw}
+                        </p>
+                      );
+                    }
+                    return (
+                      <div 
+                        key={index} 
+                        className="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-indigo-500 rounded-r-lg p-4 hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex items-start gap-3">
+                          <span className="text-indigo-600 font-bold text-lg flex-shrink-0">
+                            {item.number}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-600 mb-1">
+                              {item.label}
+                            </p>
+                            <p className="text-base text-gray-800 break-words">
+                              {item.value}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               ) : (
-                // Formatted Medical Output
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-gray-800 whitespace-pre-wrap text-sm leading-relaxed">
+                // Fallback for non-parsed content
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-5 text-gray-800 whitespace-pre-wrap text-sm leading-relaxed">
                   {typeof result === "string" ? result : result.text || "No analysis text available"}
                 </div>
               )}
 
             </div>
           ) : (
-            <p className="text-gray-600">No analysis data available</p>
+            <div className="p-6 text-center">
+              <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-600">No analysis data available</p>
+            </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="bg-gray-50 p-4 flex justify-end gap-3">
+        <div className="bg-gray-50 border-t border-gray-200 p-5 flex justify-between items-center">
+          <p className="text-xs text-gray-500">
+            ⚠️ Always verify prescription details with a healthcare professional
+          </p>
           <button
             onClick={onClose}
-            className="bg-indigo-600 text-white py-2 px-6 rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
+            className="bg-indigo-600 text-white py-2.5 px-8 rounded-lg font-semibold hover:bg-indigo-700 active:scale-95 transition-all shadow-md"
           >
             Close
           </button>
@@ -496,6 +634,7 @@ setShowModal(true);
 };
 
 export default PrescriptionAnalyzer;
+
 
 
 
