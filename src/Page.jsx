@@ -708,144 +708,386 @@ const ResultModal = ({ isOpen, onClose, result }) => {
 
 
 // API Function to fetch medication alternatives using Claude API with web search
-const fetchMedicationAlternatives = async (medication) => {
-  try {
-    // Call Claude API with web search enabled
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 4000,
-        messages: [
-          { 
-            role: "user", 
-            content: `You are a pharmaceutical database expert. Find alternatives for the medication "${medication}" available in the Indian market.
+const ResultModal = ({ isOpen, onClose, result }) => {
+  const [showRaw, setShowRaw] = useState(false);
+  const [showAlternatives, setShowAlternatives] = useState(false);
+  const [selectedMedication, setSelectedMedication] = useState(null);
+  const [alternatives, setAlternatives] = useState(null);
+  const [loadingAlternatives, setLoadingAlternatives] = useState(false);
 
-REQUIREMENTS:
-1. Search for both GENERIC and BRAND NAME alternatives
-2. Focus ONLY on medicines available in India
-3. Include accurate price ranges in Indian Rupees (₹)
-4. Prioritize commonly prescribed and widely available options
-5. Include both cheaper generic versions and premium branded options
+  if (!isOpen) return null;
 
-Use web search to find current and accurate information about:
-- Available alternatives in India
-- Current market prices
-- Manufacturer details
-- Key features and differences
-
-OUTPUT FORMAT - Return ONLY valid JSON (no markdown, no backticks, no extra text):
-
-{
-  "alternatives": [
-    {
-      "name": "Exact medicine name as sold in India",
-      "type": "Generic" OR "Brand",
-      "price": "₹[lowest]-[highest] per [unit, e.g., strip of 10 tablets]",
-      "manufacturer": "Actual pharmaceutical company name",
-      "note": "Key differentiator - e.g., 'Same salt, lower cost', 'Extended release formula', 'Combination drug', etc."
-    }
-  ]
-}
-
-GUIDELINES:
-- Provide 6-8 alternatives (mix of generic and branded)
-- Price format: "₹50-80 per strip of 10 tablets" or "₹200-350 per bottle of 100ml"
-- For generics: mention if bioequivalent, cost savings vs brand
-- For brands: mention unique features (e.g., faster absorption, better tolerability)
-- Note any combination drugs or different formulations
-- Mention if medicine is OTC (Over-The-Counter) or requires prescription
-
-CRITICAL: Return ONLY the JSON object. No preamble, no markdown formatting, no explanations.` 
-          }
-        ],
-        tools: [
-          {
-            "type": "web_search_20250305",
-            "name": "web_search"
-          }
-        ]
-      })
+  // Parse the result text into sections
+  const parseResult = (text) => {
+    if (!text) return null;
+    const lines = text.split('\n').filter(line => line.trim());
+    return lines.map((line, index) => {
+      const match = line.match(/^(\d+\))\s*(.+?):\s*(.+)$/);
+      if (match) {
+        return { number: match[1], label: match[2], value: match[3] };
+      }
+      return { raw: line };
     });
+  };
 
-    // Handle HTTP errors
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      
-      switch (response.status) {
-        case 400:
-          throw new Error('Invalid API request. Please check the medication name.');
-        case 401:
-          throw new Error('API authentication failed. Check your API key.');
-        case 403:
-          throw new Error('API access denied. Check permissions.');
-        case 429:
-          throw new Error('Too many requests. Please wait a moment and try again.');
-        case 500:
-          throw new Error('API server error. Please try again later.');
-        default:
-          throw new Error(errorData.error?.message || `API error: ${response.status}`);
-      }
-    }
+  const parsedData = typeof result === "string" ? parseResult(result) : null;
 
-    // Parse response
-    const data = await response.json();
-    console.log("Claude API raw response:", data);
+  // Extract medications from parsed data
+  const getMedications = () => {
+    if (!parsedData) return [];
+    const medSection = parsedData.find(item => 
+      item.label && item.label.toLowerCase().includes('medication')
+    );
+    if (!medSection || !medSection.value) return [];
     
-    // Extract text from all content blocks (including tool use responses)
-    let text = '';
-    if (data.content && Array.isArray(data.content)) {
-      for (const block of data.content) {
-        if (block.type === 'text') {
-          text += block.text;
-        }
-      }
+    return medSection.value
+      .split(',')
+      .map(med => med.trim())
+      .filter(med => med && med !== 'N/A');
+  };
+
+  const medications = getMedications();
+
+  // Fetch alternatives for selected medication using the API function
+  const handleFetchAlternatives = async (medication) => {
+    setLoadingAlternatives(true);
+    setSelectedMedication(medication);
+    
+    const result = await fetchMedicationAlternatives(medication, apiKey);
+    
+    if (result.success) {
+      setAlternatives(result.data);
+      setShowAlternatives(true);
+    } else {
+      setAlternatives(`Error: ${result.error}\n\nPlease try again or check your internet connection.`);
+      setShowAlternatives(true);
     }
     
-    if (!text) {
-      throw new Error('No content in API response');
-    }
-    
-    // Clean up the response - remove markdown code blocks if present
-    text = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    
-    // Try to parse JSON
-    let jsonData;
-    try {
-      jsonData = JSON.parse(text);
-    } catch (parseError) {
-      console.error('JSON parse error:', parseError);
-      console.error('Raw text:', text);
-      throw new Error('Failed to parse API response. Please try again.');
-    }
-    
-    // Validate the structure
-    if (!jsonData.alternatives || !Array.isArray(jsonData.alternatives)) {
-      throw new Error('Invalid response format from API');
-    }
-    
-    // Return success with data
-    return { success: true, data: jsonData };
-    
-  } catch (error) {
-    console.error('Error fetching alternatives:', error);
-    return { 
-      success: false, 
-      error: error.message || 'Failed to fetch alternatives' 
-    };
-  }
+    setLoadingAlternatives(false);
+  };
+
+  const closeAlternatives = () => {
+    setShowAlternatives(false);
+    setSelectedMedication(null);
+    setAlternatives(null);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden">
+        
+        {/* Header */}
+        <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <FileText className="w-8 h-8" />
+              <h2 className="text-2xl font-bold">Prescription Analysis</h2>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-all"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="overflow-y-auto max-h-[calc(90vh-180px)]">
+          {result ? (
+            <div className="p-6">
+
+              {/* Toggle Button */}
+              <div className="flex justify-end mb-4">
+                <button
+                  onClick={() => setShowRaw(!showRaw)}
+                  className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 px-4 py-2 rounded-lg font-medium transition-all"
+                >
+                  {showRaw ? (
+                    <>
+                      <EyeOff className="w-4 h-4" />
+                      Hide Raw Response
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-4 h-4" />
+                      Show Raw Response
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Content */}
+              {showRaw ? (
+                <pre className="bg-gray-900 text-green-400 p-5 rounded-xl overflow-x-auto text-xs leading-relaxed font-mono shadow-inner">
+                  {JSON.stringify(result, null, 2)}
+                </pre>
+              ) : showAlternatives ? (
+                // Alternatives View with Table
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-800">
+                        Alternatives for {selectedMedication}
+                      </h3>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Market alternatives with pricing information
+                      </p>
+                    </div>
+                    <button
+                      onClick={closeAlternatives}
+                      className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 px-4 py-2 rounded-lg font-medium transition-all text-sm"
+                    >
+                      ← Back to Results
+                    </button>
+                  </div>
+
+                  {loadingAlternatives ? (
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mb-4" />
+                      <p className="text-gray-600">Searching for alternatives...</p>
+                    </div>
+                  ) : alternatives ? (
+                    <div>
+                      <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg mb-4">
+                        <p className="text-amber-800 text-sm font-medium">
+                          ⚠️ This information is for reference only. Always consult your doctor or pharmacist before switching medications.
+                        </p>
+                      </div>
+                      
+                      {/* Table Display */}
+                      {alternatives.alternatives && alternatives.alternatives.length > 0 ? (
+                        <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
+                          <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gradient-to-r from-indigo-600 to-indigo-700">
+                              <tr>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                                  #
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                                  Medicine Name
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                                  Type
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                                  Price Range
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                                  Manufacturer
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                                  Notes
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              {alternatives.alternatives.map((alt, index) => (
+                                <tr key={index} className="hover:bg-indigo-50 transition-colors">
+                                  <td className="px-4 py-3 text-sm font-medium text-gray-700">
+                                    {index + 1}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm font-semibold text-gray-900">
+                                    {alt.name}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm">
+                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                      alt.type === 'Generic' 
+                                        ? 'bg-green-100 text-green-800' 
+                                        : 'bg-blue-100 text-blue-800'
+                                    }`}>
+                                      {alt.type}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3 text-sm font-medium text-indigo-700">
+                                    {alt.price}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-700">
+                                    {alt.manufacturer}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-600">
+                                    {alt.note}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                          <p className="text-red-700 text-sm">
+                            {typeof alternatives === 'string' ? alternatives : 'Unable to load alternatives. Please try again.'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-gray-600 text-center py-8">No alternatives available</p>
+                  )}
+                </div>
+              ) : parsedData ? (
+                // Formatted Medical Output with Table Structure
+                <div className="space-y-6">
+                  {/* Patient and Doctor Information */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {parsedData.filter(item => 
+                      item.label && !item.label.toLowerCase().includes('medication') && 
+                      !item.label.toLowerCase().includes('dosage') &&
+                      !item.label.toLowerCase().includes('frequency') &&
+                      !item.label.toLowerCase().includes('duration')
+                    ).map((item, index) => (
+                      <div 
+                        key={index}
+                        className="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-indigo-500 rounded-r-lg p-4"
+                      >
+                        <p className="text-xs font-semibold text-gray-600 mb-1">
+                          {item.label}
+                        </p>
+                        <p className="text-base text-gray-800 font-medium">
+                          {item.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Medications Table */}
+                  {(() => {
+                    const medSection = parsedData.find(item => item.label && item.label.toLowerCase().includes('medication'));
+                    const dosageSection = parsedData.find(item => item.label && item.label.toLowerCase().includes('dosage'));
+                    const frequencySection = parsedData.find(item => item.label && item.label.toLowerCase().includes('frequency'));
+                    const durationSection = parsedData.find(item => item.label && item.label.toLowerCase().includes('duration'));
+                    
+                    if (!medSection) return null;
+                    
+                    const meds = medSection.value.split(',').map(m => m.trim()).filter(m => m && m !== 'N/A');
+                    const dosages = dosageSection ? dosageSection.value.split(',').map(m => m.trim()) : [];
+                    const frequencies = frequencySection ? frequencySection.value.split(',').map(m => m.trim()) : [];
+                    const durations = durationSection ? durationSection.value.split(',').map(m => m.trim()) : [];
+                    
+                    if (meds.length === 0) return null;
+                    
+                    return (
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-800 mb-3">Prescribed Medications</h3>
+                        <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm mb-4">
+                          <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gradient-to-r from-indigo-600 to-indigo-700">
+                              <tr>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                                  #
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                                  Medication Name
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                                  Dosage
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                                  Frequency
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                                  Duration
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                                  Action
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              {meds.map((med, index) => (
+                                <tr key={index} className="hover:bg-indigo-50 transition-colors">
+                                  <td className="px-4 py-3 text-sm font-medium text-gray-700">
+                                    {index + 1}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm font-semibold text-gray-900">
+                                    {med}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-700">
+                                    {dosages[index] || 'N/A'}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-700">
+                                    {frequencies[index] || 'N/A'}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-700">
+                                    {durations[index] || 'N/A'}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm">
+                                    <button
+                                      onClick={() => handleFetchAlternatives(med)}
+                                      disabled={loadingAlternatives}
+                                      className="bg-indigo-600 text-white px-3 py-1.5 rounded-md text-xs font-medium hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                                    >
+                                      {loadingAlternatives && selectedMedication === med ? (
+                                        <>
+                                          <Loader2 className="w-3 h-3 animate-spin" />
+                                          Loading...
+                                        </>
+                                      ) : (
+                                        <>
+                                          Find Alternatives
+                                        </>
+                                      )}
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Warnings Section */}
+                  {(() => {
+                    const warningsSection = parsedData.find(item => item.label && item.label.toLowerCase().includes('warning'));
+                    if (!warningsSection || warningsSection.value === 'N/A') return null;
+                    
+                    return (
+                      <div className="bg-amber-50 border-l-4 border-amber-500 rounded-r-lg p-4">
+                        <p className="text-xs font-semibold text-amber-800 mb-1">
+                          ⚠️ {warningsSection.label}
+                        </p>
+                        <p className="text-sm text-amber-900">
+                          {warningsSection.value}
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              ) : (
+                // Fallback for non-parsed content
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-5 text-gray-800 whitespace-pre-wrap text-sm leading-relaxed">
+                  {typeof result === "string" ? result : result.text || "No analysis text available"}
+                </div>
+              )}
+
+            </div>
+          ) : (
+            <div className="p-6 text-center">
+              <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-600">No analysis data available</p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="bg-gray-50 border-t border-gray-200 p-5 flex justify-between items-center">
+          <p className="text-xs text-gray-500">
+            ⚠️ Always verify prescription details with a healthcare professional
+          </p>
+          <button
+            onClick={onClose}
+            className="bg-indigo-600 text-white py-2.5 px-8 rounded-lg font-semibold hover:bg-indigo-700 active:scale-95 transition-all shadow-md"
+          >
+            Close
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
 };
-
-// Example usage:
-// const result = await fetchMedicationAlternatives("Paracetamol");
-// if (result.success) {
-//   console.log(result.data.alternatives);
-// } else {
-//   console.error(result.error);
-// }
 
 
 // Main Prescription Analyzer Component
@@ -1089,6 +1331,7 @@ setShowModal(true);
 };
 
 export default PrescriptionAnalyzer;
+
 
 
 
