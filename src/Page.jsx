@@ -440,7 +440,7 @@ const ResultModal = ({ isOpen, onClose, result }) => {
                   {JSON.stringify(result, null, 2)}
                 </pre>
               ) : showAlternatives ? (
-                // Alternatives View
+                // Alternatives View with Table
                 <div className="space-y-4">
                   <div className="flex items-center justify-between mb-4">
                     <div>
@@ -465,15 +465,78 @@ const ResultModal = ({ isOpen, onClose, result }) => {
                       <p className="text-gray-600">Searching for alternatives...</p>
                     </div>
                   ) : alternatives ? (
-                    <div className="prose prose-sm max-w-none">
+                    <div>
                       <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg mb-4">
                         <p className="text-amber-800 text-sm font-medium">
                           ⚠️ This information is for reference only. Always consult your doctor or pharmacist before switching medications.
                         </p>
                       </div>
-                      <div className="bg-white border border-gray-200 rounded-lg p-5 text-gray-800 whitespace-pre-wrap text-sm leading-relaxed">
-                        {alternatives}
-                      </div>
+                      
+                      {/* Table Display */}
+                      {alternatives.alternatives && alternatives.alternatives.length > 0 ? (
+                        <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
+                          <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gradient-to-r from-indigo-600 to-indigo-700">
+                              <tr>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                                  #
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                                  Medicine Name
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                                  Type
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                                  Price Range
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                                  Manufacturer
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                                  Notes
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              {alternatives.alternatives.map((alt, index) => (
+                                <tr key={index} className="hover:bg-indigo-50 transition-colors">
+                                  <td className="px-4 py-3 text-sm font-medium text-gray-700">
+                                    {index + 1}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm font-semibold text-gray-900">
+                                    {alt.name}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm">
+                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                      alt.type === 'Generic' 
+                                        ? 'bg-green-100 text-green-800' 
+                                        : 'bg-blue-100 text-blue-800'
+                                    }`}>
+                                      {alt.type}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3 text-sm font-medium text-indigo-700">
+                                    {alt.price}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-700">
+                                    {alt.manufacturer}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-600">
+                                    {alt.note}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                          <p className="text-red-700 text-sm">
+                            {typeof alternatives === 'string' ? alternatives : 'Unable to load alternatives. Please try again.'}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <p className="text-gray-600 text-center py-8">No alternatives available</p>
@@ -580,7 +643,6 @@ const ResultModal = ({ isOpen, onClose, result }) => {
     </div>
   );
 };
-
 
 // Main Prescription Analyzer Component
 const PrescriptionAnalyzer = () => {
@@ -823,6 +885,7 @@ setShowModal(true);
 };
 
 export default PrescriptionAnalyzer;
+
 
 
 
