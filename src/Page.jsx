@@ -706,6 +706,148 @@ const ResultModal = ({ isOpen, onClose, result }) => {
   );
 };
 
+
+// API Function to fetch medication alternatives using Claude API with web search
+const fetchMedicationAlternatives = async (medication) => {
+  try {
+    // Call Claude API with web search enabled
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 4000,
+        messages: [
+          { 
+            role: "user", 
+            content: `You are a pharmaceutical database expert. Find alternatives for the medication "${medication}" available in the Indian market.
+
+REQUIREMENTS:
+1. Search for both GENERIC and BRAND NAME alternatives
+2. Focus ONLY on medicines available in India
+3. Include accurate price ranges in Indian Rupees (₹)
+4. Prioritize commonly prescribed and widely available options
+5. Include both cheaper generic versions and premium branded options
+
+Use web search to find current and accurate information about:
+- Available alternatives in India
+- Current market prices
+- Manufacturer details
+- Key features and differences
+
+OUTPUT FORMAT - Return ONLY valid JSON (no markdown, no backticks, no extra text):
+
+{
+  "alternatives": [
+    {
+      "name": "Exact medicine name as sold in India",
+      "type": "Generic" OR "Brand",
+      "price": "₹[lowest]-[highest] per [unit, e.g., strip of 10 tablets]",
+      "manufacturer": "Actual pharmaceutical company name",
+      "note": "Key differentiator - e.g., 'Same salt, lower cost', 'Extended release formula', 'Combination drug', etc."
+    }
+  ]
+}
+
+GUIDELINES:
+- Provide 6-8 alternatives (mix of generic and branded)
+- Price format: "₹50-80 per strip of 10 tablets" or "₹200-350 per bottle of 100ml"
+- For generics: mention if bioequivalent, cost savings vs brand
+- For brands: mention unique features (e.g., faster absorption, better tolerability)
+- Note any combination drugs or different formulations
+- Mention if medicine is OTC (Over-The-Counter) or requires prescription
+
+CRITICAL: Return ONLY the JSON object. No preamble, no markdown formatting, no explanations.` 
+          }
+        ],
+        tools: [
+          {
+            "type": "web_search_20250305",
+            "name": "web_search"
+          }
+        ]
+      })
+    });
+
+    // Handle HTTP errors
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      
+      switch (response.status) {
+        case 400:
+          throw new Error('Invalid API request. Please check the medication name.');
+        case 401:
+          throw new Error('API authentication failed. Check your API key.');
+        case 403:
+          throw new Error('API access denied. Check permissions.');
+        case 429:
+          throw new Error('Too many requests. Please wait a moment and try again.');
+        case 500:
+          throw new Error('API server error. Please try again later.');
+        default:
+          throw new Error(errorData.error?.message || `API error: ${response.status}`);
+      }
+    }
+
+    // Parse response
+    const data = await response.json();
+    console.log("Claude API raw response:", data);
+    
+    // Extract text from all content blocks (including tool use responses)
+    let text = '';
+    if (data.content && Array.isArray(data.content)) {
+      for (const block of data.content) {
+        if (block.type === 'text') {
+          text += block.text;
+        }
+      }
+    }
+    
+    if (!text) {
+      throw new Error('No content in API response');
+    }
+    
+    // Clean up the response - remove markdown code blocks if present
+    text = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    
+    // Try to parse JSON
+    let jsonData;
+    try {
+      jsonData = JSON.parse(text);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      console.error('Raw text:', text);
+      throw new Error('Failed to parse API response. Please try again.');
+    }
+    
+    // Validate the structure
+    if (!jsonData.alternatives || !Array.isArray(jsonData.alternatives)) {
+      throw new Error('Invalid response format from API');
+    }
+    
+    // Return success with data
+    return { success: true, data: jsonData };
+    
+  } catch (error) {
+    console.error('Error fetching alternatives:', error);
+    return { 
+      success: false, 
+      error: error.message || 'Failed to fetch alternatives' 
+    };
+  }
+};
+
+// Example usage:
+// const result = await fetchMedicationAlternatives("Paracetamol");
+// if (result.success) {
+//   console.log(result.data.alternatives);
+// } else {
+//   console.error(result.error);
+// }
+
+
 // Main Prescription Analyzer Component
 const PrescriptionAnalyzer = () => {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -947,6 +1089,7 @@ setShowModal(true);
 };
 
 export default PrescriptionAnalyzer;
+
 
 
 
