@@ -1575,7 +1575,7 @@ setShowModal(true);
   <img 
     src="/logo.jpg"      // place your logo in public/logo.png or update path
     alt="Company Logo" 
-    className="w-12 h-12 object-contain"
+    className="w-20 h-20 object-contain"
   />
 </div>
 
@@ -1628,6 +1628,7 @@ setShowModal(true);
 };
 
 export default PrescriptionAnalyzer;
+
 
 
 
