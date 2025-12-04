@@ -1568,9 +1568,17 @@ setShowModal(true);
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-4">
+          {/* <div className="flex items-center justify-center mb-4">
             <FileText className="w-12 h-12 text-indigo-600" />
-          </div>
+          </div> */}
+          <div className="flex items-center justify-center mb-4">
+  <img 
+    src="/logo.png"      // place your logo in public/logo.png or update path
+    alt="Company Logo" 
+    className="w-12 h-12 object-contain"
+  />
+</div>
+
           <h1 className="text-4xl font-bold text-gray-800 mb-2">
             Prescription Analyzer
           </h1>
@@ -1620,6 +1628,7 @@ setShowModal(true);
 };
 
 export default PrescriptionAnalyzer;
+
 
 
 
