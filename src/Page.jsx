@@ -1573,14 +1573,14 @@ setShowModal(true);
           </div> */}
           <div className="flex items-center justify-center mb-4">
   <img 
-    src="/logo.png"      // place your logo in public/logo.png or update path
+    src="/logo.jpg"      // place your logo in public/logo.png or update path
     alt="Company Logo" 
     className="w-12 h-12 object-contain"
   />
 </div>
 
           <h1 className="text-4xl font-bold text-gray-800 mb-2">
-            Prescription Analyzer
+            Rajay Technologies
           </h1>
           <p className="text-gray-600">
             Upload a doctor's prescription image for AI-powered analysis
@@ -1628,6 +1628,7 @@ setShowModal(true);
 };
 
 export default PrescriptionAnalyzer;
+
 
 
 
