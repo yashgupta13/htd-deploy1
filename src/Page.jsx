@@ -1580,7 +1580,7 @@ setShowModal(true);
 </div>
 
           <h1 className="text-4xl font-bold text-gray-800 mb-2">
-            Rajay Technologies
+            RAJAY Technologies
           </h1>
           <p className="text-gray-600">
             Upload a doctor's prescription image for AI-powered analysis
@@ -1628,6 +1628,7 @@ setShowModal(true);
 };
 
 export default PrescriptionAnalyzer;
+
 
 
 
