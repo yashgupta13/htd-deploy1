@@ -759,7 +759,7 @@ const response = await fetch(geminiApiUrl, {
         3) Dosage Information: [List all dosages corresponding to medications, e.g., '500mg, 250mg']
         4) Frequency: [List all frequencies, e.g., 'Twice daily, Once at bedtime']
         5) Duration: [List all durations, e.g., '7 days, Until finished']
-        6) Summary: [A small summary about the medicine , e.g.,'for what it is used for']
+        6) Summary: [A small summary about the each medicine , e.g.,'for what it is used for']
         7) Doctor Name/Signature: [Name or N/A]
         8) Date: [Extracted Date in YYYY-MM-DD format or N/A]
         9) Warnings/Contraindications: [List any explicit warnings or N/A]
@@ -857,7 +857,7 @@ setShowModal(true);
 </div>
 
           <h1 className="text-4xl font-bold text-gray-800 mb-2">
-            RAJAY Technologies
+            Prescription Analyzer
           </h1>
           <p className="text-gray-600">
             Upload a doctor's prescription image for AI-powered analysis
