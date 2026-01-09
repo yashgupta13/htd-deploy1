@@ -759,7 +759,7 @@ const response = await fetch(geminiApiUrl, {
         3) Dosage Information: [List all dosages corresponding to medications, e.g., '500mg, 250mg']
         4) Frequency: [List all frequencies, e.g., 'Twice daily, Once at bedtime']
         5) Duration: [List all durations, e.g., '7 days, Until finished']
-        6) Summary: [A small summary about the each medicine , e.g.,'for what it is used for']
+        6) Summary: [A small summary about the each medicine, e.g., 'Anemia, Multivitamin']
         7) Doctor Name/Signature: [Name or N/A]
         8) Date: [Extracted Date in YYYY-MM-DD format or N/A]
         9) Warnings/Contraindications: [List any explicit warnings or N/A]
@@ -849,12 +849,12 @@ setShowModal(true);
             <FileText className="w-12 h-12 text-indigo-600" />
           </div> */}
           <div className="flex items-center justify-center mb-4">
-  <img 
+  {/* <img 
     src="/logo.jpg"      // place your logo in public/logo.png or update path
     alt="Company Logo" 
     className="w-20 h-20 object-contain"
   />
-</div>
+</div> */}
 
           <h1 className="text-4xl font-bold text-gray-800 mb-2">
             Prescription Analyzer
@@ -904,6 +904,7 @@ setShowModal(true);
   );
 };
 export default PrescriptionAnalyzer;
+
 
 
 
