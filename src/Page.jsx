@@ -510,8 +510,6 @@ const ResultModal = ({ isOpen, onClose, result }) => {
     </div>
   );
 };
-                                          /
-
 // API Function to fetch medication alternatives using Gemini API
 const fetchMedicationAlternatives = async (medication) => {
   // Get API key from environment variable
@@ -900,6 +898,7 @@ setShowModal(true);
   );
 };
 export default PrescriptionAnalyzer;
+
 
 
 
