@@ -435,6 +435,9 @@ const ResultModal = ({ isOpen, onClose, result }) => {
                                   <td className="px-4 py-3 text-sm text-gray-700">
                                     {durations[index] || 'N/A'}
                                   </td>
+                                  <td className="px-4 py-3 text-sm text-gray-700">
+                                    {summarys[index] || 'N/A'}
+                                  </td>
                                   <td className="px-4 py-3 text-sm">
                                     <button
                                       onClick={() => handleFetchAlternatives(med)}
@@ -901,6 +904,7 @@ setShowModal(true);
   );
 };
 export default PrescriptionAnalyzer;
+
 
 
 
