@@ -853,8 +853,8 @@ setShowModal(true);
     src="/logo.jpg"      // place your logo in public/logo.png or update path
     alt="Company Logo" 
     className="w-20 h-20 object-contain"
-  />
-</div> */}
+  />*/}
+</div> 
 
           <h1 className="text-4xl font-bold text-gray-800 mb-2">
             Prescription Analyzer
@@ -904,6 +904,7 @@ setShowModal(true);
   );
 };
 export default PrescriptionAnalyzer;
+
 
 
 
