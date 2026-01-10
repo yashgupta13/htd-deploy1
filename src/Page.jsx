@@ -200,8 +200,8 @@ const ResultModal = ({ isOpen, onClose, result }) => {
         <div className="overflow-y-auto max-h-[calc(90vh-180px)]">
           {result ? (
             <div className="p-6">
-
-              {/* Toggle Button */}
+ {/* Toggle Button */}
+              {/* /*
               <div className="flex justify-end mb-4">
                 <button
                   onClick={() => setShowRaw(!showRaw)}
@@ -219,7 +219,7 @@ const ResultModal = ({ isOpen, onClose, result }) => {
                     </>
                   )}
                 </button>
-              </div>
+              </div> */ */}
 
               {/* Content */}
               {showRaw ? (
@@ -904,6 +904,7 @@ setShowModal(true);
   );
 };
 export default PrescriptionAnalyzer;
+
 
 
 
