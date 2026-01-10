@@ -201,8 +201,8 @@ const ResultModal = ({ isOpen, onClose, result }) => {
           {result ? (
             <div className="p-6">
  {/* Toggle Button */}
-              {/* /*
-              <div className="flex justify-end mb-4">
+              
+              {/* <div className="flex justify-end mb-4">
                 <button
                   onClick={() => setShowRaw(!showRaw)}
                   className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 px-4 py-2 rounded-lg font-medium transition-all"
@@ -219,14 +219,17 @@ const ResultModal = ({ isOpen, onClose, result }) => {
                     </>
                   )}
                 </button>
-              </div> */ */}
+              </div>  */}
 
               {/* Content */}
-              {showRaw ? (
+              
+              {/* {showRaw ? (
                 <pre className="bg-gray-900 text-green-400 p-5 rounded-xl overflow-x-auto text-xs leading-relaxed font-mono shadow-inner">
                   {JSON.stringify(result, null, 2)}
                 </pre>
-              ) : showAlternatives ? (
+              ) : showAlternatives ? ( */}
+
+              {showAlternatives ? (
                 // Alternatives View with Table
                 <div className="space-y-4">
                   <div className="flex items-center justify-between mb-4">
@@ -350,10 +353,12 @@ const ResultModal = ({ isOpen, onClose, result }) => {
                   {/* Patient and Doctor Information */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {parsedData.filter(item => 
-                      item.label && !item.label.toLowerCase().includes('medication') && 
-                      !item.label.toLowerCase().includes('dosage') &&
-                      !item.label.toLowerCase().includes('frequency') &&
-                      !item.label.toLowerCase().includes('duration')
+                      item.label &&
+!item.label.toLowerCase().includes('medication') &&
+!item.label.toLowerCase().includes('dosage') &&
+!item.label.toLowerCase().includes('frequency') &&
+!item.label.toLowerCase().includes('duration') &&
+!item.label.toLowerCase().includes('summary')
                     ).map((item, index) => (
                       <div 
                         key={index}
@@ -904,6 +909,7 @@ setShowModal(true);
   );
 };
 export default PrescriptionAnalyzer;
+
 
 
 
