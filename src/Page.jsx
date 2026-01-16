@@ -7,6 +7,7 @@ const uploadToVercelBlob = async (analysisData, imageFile) => {
   try {
     const blobToken = import.meta.env.BLOB_READ_WRITE_TOKEN;
     
+    
     if (!blobToken) {
       throw new Error('Vercel Blob token not configured');
     }
@@ -1007,6 +1008,7 @@ setShowModal(true);
   );
 };
 export default PrescriptionAnalyzer;
+
 
 
 
