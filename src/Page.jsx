@@ -1,6 +1,95 @@
 import { useState } from 'react';
 import { Upload, X, FileText, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
+const uploadToVercelBlob = async (analysisData, imageFile) => {
+  try {
+    const blobToken = import.meta.env.VITE_BLOB_READ_WRITE_TOKEN;
+    
+    if (!blobToken) {
+      throw new Error('Vercel Blob token not configured');
+    }
+
+    // Create a unique filename with timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `prescription-${timestamp}.json`;
+
+    // Prepare the data to upload
+    const uploadData = {
+      timestamp: new Date().toISOString(),
+      imageName: imageFile.name,
+      imageSize: imageFile.size,
+      imageType: imageFile.type,
+      analysis: analysisData
+    };
+
+    // Upload to Vercel Blob
+    const response = await fetch(
+      `https://blob.vercel-storage.com/${filename}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${blobToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(uploadData)
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Upload failed: ${response.status} - ${errorText}`);
+    }
+
+    const result = await response.json();
+    
+    return {
+      success: true,
+      url: result.url,
+      downloadUrl: result.downloadUrl,
+      pathname: result.pathname
+    };
+
+  } catch (error) {
+    console.error('Error uploading to Vercel Blob:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to upload to cloud storage'
+    };
+  }
+};
+
+function extractData(geminiResponse) {
+  const rawText =
+    geminiResponse?.candidates?.[0]?.content?.parts?.[0]?.text
+
+  const extract = (label) => {
+    const match = rawText.match(new RegExp(`${label}: (.+)`))
+    return match ? match[1].trim() : "N/A"
+  
+  }
+
+  const meds = extract("Medication Names").split(",")
+  const dosages = extract("Dosage Information").split(",")
+  const freqs = extract("Frequency").split(",")
+  const durations = extract("Duration").split(",")
+  const purposes = extract("Summary").split(",")
+
+  return {
+    patientName: extract("Patient Name"),
+    doctorName: extract("Doctor Name/Signature"),
+    date: extract("Date"),
+    warnings: extract("Warnings/Contraindications"),
+    createdAt: new Date().toISOString(),
+    medications: meds.map((m, i) => ({
+      name: m.trim(),
+      dosage: dosages[i]?.trim() || "N/A",
+      frequency: freqs[i]?.trim() || "N/A",
+      duration: durations[i]?.trim() || "N/A",
+      purpose: purposes[i]?.trim() || "N/A"
+    }))
+  }
+}
+
 // Upload Area Component
 const UploadArea = ({ onFileSelect }) => {
   const handleDrop = (e) => {
@@ -814,6 +903,13 @@ const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
 if (!text) {
   throw new Error('Invalid response from Gemini API');
 }
+      const result = await uploadToVercelBlob(analysisResult, selectedFile);
+
+if (result.success) {
+  console.log('Saved to:', result.downloadUrl);
+} else {
+  console.error('Upload failed:', result.error);
+}
 
 setAnalysisResult(text);
 setShowModal(true);
@@ -909,6 +1005,7 @@ setShowModal(true);
   );
 };
 export default PrescriptionAnalyzer;
+
 
 
 
