@@ -14,7 +14,7 @@ const uploadToVercelBlob = async (analysisData, imageFile) => {
 
     // Create a unique filename with timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `prescription-${timestamp}.json`;
+    
 
     // Prepare the data to upload
     // const uploadData = {
@@ -26,6 +26,7 @@ const uploadToVercelBlob = async (analysisData, imageFile) => {
     // };
 
     const uploadData=extractData(analysisData);
+    const filename = `prescription-${uploadData.patientName}.json`;
 
 
     // Upload to Vercel Blob
@@ -1011,6 +1012,7 @@ setShowModal(true);
   );
 };
 export default PrescriptionAnalyzer;
+
 
 
 
