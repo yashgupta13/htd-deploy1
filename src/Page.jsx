@@ -17,13 +17,16 @@ const uploadToVercelBlob = async (analysisData, imageFile) => {
     const filename = `prescription-${timestamp}.json`;
 
     // Prepare the data to upload
-    const uploadData = {
-      timestamp: new Date().toISOString(),
-      imageName: imageFile.name,
-      imageSize: imageFile.size,
-      imageType: imageFile.type,
-      analysis: analysisData
-    };
+    // const uploadData = {
+    //   timestamp: new Date().toISOString(),
+    //   imageName: imageFile.name,
+    //   imageSize: imageFile.size,
+    //   imageType: imageFile.type,
+    //   analysis: analysisData
+    // };
+
+    const uploadData=extractData(analysisData);
+
 
     // Upload to Vercel Blob
     const response = await fetch(
@@ -906,7 +909,7 @@ const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
 if (!text) {
   throw new Error('Invalid response from Gemini API');
 }
-      const result = await uploadToVercelBlob(analysisResult, selectedFile);
+      const result = await uploadToVercelBlob(data, selectedFile);
 
 if (result.success) {
   console.log('Saved to:', result.downloadUrl);
@@ -1008,6 +1011,7 @@ setShowModal(true);
   );
 };
 export default PrescriptionAnalyzer;
+
 
 
 
